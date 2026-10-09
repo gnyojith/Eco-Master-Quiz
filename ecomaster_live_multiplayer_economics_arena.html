@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoMaster Live - Real-Time Economics Multiplayer Quiz Arena</title>
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          },
+          keyframes: {
+            popIn: {
+              '0%': { transform: 'scale(0.92)', opacity: '0' },
+              '100%': { transform: 'scale(1)', opacity: '1' }
+            },
+            pulseSubtle: {
+              '0%, 100%': { transform: 'scale(1)' },
+              '50%': { transform: 'scale(1.05)' }
+            }
+          },
+          animation: {
+            popIn: 'popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            pulseSubtle: 'pulseSubtle 2s ease-in-out infinite'
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Lucide Icons, Canvas Confetti & QRCode.js -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
+    ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.4); border-radius: 9999px; }
+
+    .bg-mesh-grid {
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.1) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+    }
+    .dark .bg-mesh-grid {
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.22) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.18) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.18) 0px, transparent 50%);
+    }
+
+    @keyframes podiumBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .podium-winner { animation: podiumBounce 2.5s infinite ease-in-out; }
+  </style>
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200 bg-mesh-grid">
+
+  <!-- ==============================================
+       HEADER NAVIGATION & STATUS BAR
+  =============================================== -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="appController.goHome()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-emerald-500 flex items-center justify-center text-white font-black text-xl shadow-md shadow-indigo-500/20">
+          ⚡
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xl font-display font-black tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-500 bg-clip-text text-transparent">EcoMaster</span>
+            <span id="badge-cloud-status" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">Connecting...</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-medium">Class 9: Production, Cost & Revenue</p>
+        </div>
+      </div>
+
+      <!-- Action Utilities -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- Live Room Pill -->
+        <div id="nav-room-badge" class="hidden items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-mono font-bold">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span id="nav-room-code-label">ROOM</span>
+        </div>
+
+        <!-- Audio Toggle -->
+        <button onclick="soundFX.toggle()" id="btn-sound-toggle" class="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle Sound">
+          <i data-lucide="volume-2" class="w-5 h-5" id="nav-sound-icon"></i>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button onclick="appController.toggleTheme()" class="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle Dark/Light Mode">
+          <i data-lucide="moon" class="w-5 h-5" id="nav-theme-icon"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==============================================
+       MAIN APPLICATION VIEWS
+  =============================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col justify-center">
+
+    <!-- ----------------------------------------------------
+         VIEW 1: WELCOME PORTAL (LOBBY / HOST / JOIN)
+    ----------------------------------------------------- -->
+    <section id="view-lobby" class="max-w-4xl mx-auto w-full space-y-8 animate-popIn">
+      <div class="text-center space-y-3">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 text-xs font-bold uppercase tracking-wider">
+          <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Multi-Device Real-Time Arena
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tight">
+          Class 9 Economics <span class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Live Battle</span>
+        </h1>
+        <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base max-w-xl mx-auto">
+          Compete in real time across any phone, tablet, or PC on all 40 questions covering Chapters 7 & 8.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Student Identity -->
+        <div class="md:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 space-y-5">
+          <h2 class="font-display font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs">1</span>
+            Your Student Profile
+          </h2>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">Pick an Economist Avatar</label>
+            <div class="grid grid-cols-4 gap-2" id="avatar-grid-picker">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <div>
+            <label for="input-player-name" class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Your Name or Roll Number</label>
+            <input type="text" id="input-player-name" placeholder="e.g. Ananya Sharma (Roll 14)" maxlength="24"
+              class="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+          </div>
+
+          <button onclick="appController.startSoloMode()" class="w-full py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm flex items-center justify-center gap-2 transition">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>Play Solo Practice Mode</span>
+          </button>
+        </div>
+
+        <!-- Right Column: Join / Host Room -->
+        <div class="md:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 space-y-6">
+          <h2 class="font-display font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs">2</span>
+            Join or Host a Room
+          </h2>
+
+          <!-- Join Form -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Join Existing Battle Room</label>
+            <div class="flex gap-2">
+              <input type="text" id="input-room-code" placeholder="e.g. ECO9" maxlength="8"
+                class="uppercase tracking-widest text-center font-mono font-black text-xl px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 flex-1 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <button onclick="appController.joinRoomByInput()" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+                <span>Join</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-500">Scanning a teacher's QR code or clicking an invitation link automatically populates this.</p>
+          </div>
+
+          <div class="relative flex items-center justify-center">
+            <div class="border-t border-slate-200 dark:border-slate-800 w-full"></div>
+            <span class="bg-white dark:bg-slate-900 px-3 text-xs font-bold uppercase text-slate-400 absolute">or teacher / host</span>
+          </div>
+
+          <!-- Teacher Host Room Panel -->
+          <div class="p-4 rounded-2xl border border-indigo-100 dark:border-indigo-950/80 bg-indigo-50/50 dark:bg-indigo-950/30 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Host a Classroom Arena</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Project questions and watch student scores rise live</p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-200/60 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">Live Host</span>
+            </div>
+
+            <!-- Length options -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-600 dark:text-slate-400">Quiz Length:</span>
+              <button type="button" onclick="appController.setMatchLength(10)" id="btn-length-10" class="length-btn px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-700">10 Qs</button>
+              <button type="button" onclick="appController.setMatchLength(20)" id="btn-length-20" class="length-btn px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-700">20 Qs</button>
+              <button type="button" onclick="appController.setMatchLength(40)" id="btn-length-40" class="length-btn px-3 py-1 rounded-lg text-xs font-bold border-indigo-600 bg-indigo-600 text-white">All 40 Qs</button>
+            </div>
+
+            <button onclick="appController.createHostRoom()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-display font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 transition">
+              <i data-lucide="plus-circle" class="w-5 h-5"></i>
+              <span>Create Live Room & Generate QR Code</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------
+         VIEW 2: ROOM LOBBY (WAITING ROOM FOR HOST & STUDENTS)
+    ----------------------------------------------------- -->
+    <section id="view-room-lobby" class="hidden max-w-3xl mx-auto w-full space-y-6 animate-popIn">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-6">
+        
+        <!-- Header Banner with Room Code -->
+        <div class="text-center space-y-3 pb-6 border-b border-slate-100 dark:border-slate-800">
+          <span class="text-xs font-extrabold uppercase px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+            Room Active • Live Cloud Connected
+          </span>
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Students: Scan QR code or enter code</p>
+          
+          <div class="flex items-center justify-center gap-3">
+            <div id="lobby-room-code-display" class="text-5xl sm:text-6xl font-display font-black tracking-widest bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent px-4 py-1">
+              ECO9
+            </div>
+          </div>
+
+          <!-- Share & QR Buttons -->
+          <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+            <button onclick="appController.copyRoomLink()" id="btn-copy-lobby-link" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+              <span id="label-copy-link">Copy Direct Student Link</span>
+            </button>
+            <button onclick="appController.toggleQRModal()" class="px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 transition">
+              <i data-lucide="qr-code" class="w-4 h-4"></i>
+              <span>Show Large Projector QR</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Connected Players Roster -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
+              <span>Connected Players in Lobby</span>
+            </h3>
+            <span id="lobby-player-counter" class="text-xs font-bold px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600">
+              0 Players
+            </span>
+          </div>
+
+          <div id="lobby-players-list" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-56 overflow-y-auto p-1">
+            <!-- Populated via real-time sync -->
+          </div>
+        </div>
+
+        <!-- Waiting message or Host Start Button -->
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <button onclick="appController.goHome()" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 transition">
+            Leave Room
+          </button>
+          
+          <div id="host-action-container">
+            <!-- Populated conditionally: Host gets "Start Battle", student sees "Waiting for host..." -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------
+         VIEW 3: LIVE QUIZ BATTLE ARENA
+    ----------------------------------------------------- -->
+    <section id="view-quiz-arena" class="hidden space-y-4 animate-popIn">
+      
+      <!-- Top HUD Header -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        
+        <!-- Player avatar & streak -->
+        <div class="flex items-center space-x-3">
+          <div id="hud-avatar-box" class="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-2xl shadow-inner">
+            👨‍💼
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span id="hud-name-display" class="font-bold text-slate-900 dark:text-white text-base">Player</span>
+              <span id="hud-mode-pill" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-slate-500">ROOM: ECO9</span>
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="flex items-center text-amber-500 text-xs font-black">
+                <i data-lucide="flame" class="w-3.5 h-3.5 fill-current mr-0.5"></i>
+                <span id="hud-streak-counter">0 Streak</span>
+              </span>
+              <span id="hud-multiplier-badge" class="hidden text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-white">
+                1.5x MULTIPLIER!
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Countdown Clock & Points -->
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <i data-lucide="timer" class="w-4 h-4 text-slate-500"></i>
+            <span id="hud-timer-display" class="font-mono font-black text-sm text-slate-700 dark:text-slate-200">20s</span>
+          </div>
+
+          <div class="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800">
+            <i data-lucide="trophy" class="w-4 h-4 text-emerald-600"></i>
+            <div class="text-right">
+              <span class="text-[9px] uppercase font-bold text-emerald-600 block leading-tight">Score</span>
+              <span id="hud-score-display" class="font-black text-emerald-700 dark:text-emerald-400 font-mono text-base leading-tight">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exit Button -->
+        <button onclick="appController.confirmQuitBattle()" class="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 text-xs font-bold transition">
+          Exit Match
+        </button>
+      </div>
+
+      <!-- Main Layout: Question (8 cols) & Live Scoreboard (4 cols) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Question View Container -->
+        <div class="lg:col-span-8 space-y-4">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/40 dark:shadow-none relative">
+            
+            <!-- Progress Line -->
+            <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mb-6 overflow-hidden">
+              <div id="hud-progress-meter" class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: 2.5%;"></div>
+            </div>
+
+            <!-- Tags -->
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div class="flex items-center space-x-2">
+                <span id="arena-q-index-pill" class="text-xs font-black uppercase px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  Q1 / 40
+                </span>
+                <span id="arena-q-topic-pill" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                  Topic Loading
+                </span>
+              </div>
+              <span id="arena-q-tier-pill" class="text-xs font-black px-2.5 py-1 rounded-full uppercase">
+                Tier
+              </span>
+            </div>
+
+            <!-- Question Statement -->
+            <h2 id="arena-question-text" class="text-lg sm:text-xl font-display font-bold text-slate-900 dark:text-white leading-relaxed mb-6">
+              Question text loading...
+            </h2>
+
+            <!-- Options List -->
+            <div id="arena-options-container" class="space-y-3">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Detailed Explanation Box -->
+            <div id="arena-explanation-card" class="hidden mt-6 p-4 rounded-2xl border text-sm animate-popIn">
+              <div class="flex items-start gap-2.5">
+                <span id="arena-explanation-icon" class="text-lg">💡</span>
+                <div>
+                  <h4 id="arena-explanation-header" class="font-bold text-sm">Economic Analysis:</h4>
+                  <p id="arena-explanation-body" class="mt-0.5 text-slate-600 dark:text-slate-300 text-xs sm:text-sm"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center justify-between pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+              <span id="arena-status-message" class="text-xs font-bold text-slate-400">
+                Choose the best option
+              </span>
+              <button onclick="appController.advanceNextQuestion()" id="btn-arena-next" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md transition flex items-center gap-1.5">
+                <span>Next Question</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Standings Sidebar -->
+        <div class="lg:col-span-4 space-y-4">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="zap" class="w-4 h-4 text-amber-500 fill-current"></i>
+                <h3 class="font-display font-bold text-sm text-slate-900 dark:text-white">Live Leaderboard</h3>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Sync Active
+              </span>
+            </div>
+
+            <div id="arena-leaderboard-items" class="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------
+         VIEW 4: PODIUM & COMPREHENSIVE CERTIFICATE / REVIEW
+    ----------------------------------------------------- -->
+    <section id="view-game-over" class="hidden max-w-4xl mx-auto w-full space-y-8 animate-popIn">
+      
+      <!-- Top Podium Showcase -->
+      <div class="bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 rounded-3xl p-6 sm:p-10 text-white text-center shadow-2xl relative overflow-hidden border border-white/10 space-y-6">
+        <span class="text-xs font-black uppercase tracking-widest px-3 py-1 bg-amber-400 text-slate-950 rounded-full inline-block">
+          Economics Battle Complete
+        </span>
+        <h1 class="text-3xl sm:text-4xl font-display font-black">Class Championship Podium</h1>
+
+        <!-- Podium Top 3 Pillars -->
+        <div class="flex items-end justify-center gap-2 sm:gap-4 pt-4 max-w-md mx-auto">
+          <!-- 2nd Place -->
+          <div class="flex-1 flex flex-col items-center">
+            <div class="text-2xl sm:text-3xl mb-1" id="podium-p2-avatar">🥈</div>
+            <div class="text-xs font-bold truncate max-w-[80px]" id="podium-p2-name">Player 2</div>
+            <div class="text-[10px] text-indigo-300 font-mono" id="podium-p2-score">0 pts</div>
+            <div class="w-full bg-slate-700/60 rounded-t-xl h-20 sm:h-24 flex items-center justify-center font-black text-xl text-slate-300 border-t-2 border-slate-400 mt-2">
+              2
+            </div>
+          </div>
+
+          <!-- 1st Place (Winner) -->
+          <div class="flex-1 flex flex-col items-center -translate-y-2 podium-winner">
+            <span class="text-lg">👑</span>
+            <div class="text-3xl sm:text-4xl mb-1" id="podium-p1-avatar">🥇</div>
+            <div class="text-xs font-black text-amber-300 truncate max-w-[90px]" id="podium-p1-name">Champion</div>
+            <div class="text-xs text-amber-400 font-black font-mono" id="podium-p1-score">0 pts</div>
+            <div class="w-full bg-gradient-to-t from-amber-600 to-amber-500 rounded-t-2xl h-28 sm:h-36 flex items-center justify-center font-black text-3xl text-slate-950 border-t-2 border-amber-300 mt-2 shadow-lg shadow-amber-500/30">
+              1
+            </div>
+          </div>
+
+          <!-- 3rd Place -->
+          <div class="flex-1 flex flex-col items-center">
+            <div class="text-2xl sm:text-3xl mb-1" id="podium-p3-avatar">🥉</div>
+            <div class="text-xs font-bold truncate max-w-[80px]" id="podium-p3-name">Player 3</div>
+            <div class="text-[10px] text-indigo-300 font-mono" id="podium-p3-score">0 pts</div>
+            <div class="w-full bg-amber-900/60 rounded-t-xl h-14 sm:h-16 flex items-center justify-center font-black text-xl text-amber-400 border-t-2 border-amber-600 mt-2">
+              3
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal Performance Stats -->
+        <div class="grid grid-cols-3 gap-3 max-w-lg mx-auto pt-4 bg-white/5 rounded-2xl p-4 border border-white/10">
+          <div>
+            <span class="text-[10px] uppercase font-bold text-indigo-300 block">Your Score</span>
+            <span id="final-stats-score" class="text-xl sm:text-2xl font-black font-mono">0</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-indigo-300 block">Accuracy</span>
+            <span id="final-stats-accuracy" class="text-xl sm:text-2xl font-black font-mono">0%</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-indigo-300 block">Max Streak</span>
+            <span id="final-stats-streak" class="text-xl sm:text-2xl font-black font-mono">0 🔥</span>
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="pt-2 flex flex-wrap justify-center gap-3">
+          <button onclick="appController.downloadCertificate()" class="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-display font-bold text-sm flex items-center gap-2 shadow-lg transition">
+            <i data-lucide="award" class="w-4 h-4"></i>
+            <span>Download Certificate</span>
+          </button>
+          <button onclick="appController.restartBattle()" class="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center gap-2 shadow-lg transition">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            <span>Play Again</span>
+          </button>
+          <button onclick="appController.goHome()" class="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition">
+            Back to Home
+          </button>
+        </div>
+      </div>
+
+      <!-- Comprehensive 40 Qs Revision Panel -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div>
+            <h3 class="font-display font-bold text-lg text-slate-900 dark:text-white">Question Solutions & Economic Principles</h3>
+            <p class="text-xs text-slate-500">Review correct answers, formula steps, and theoretical explanations</p>
+          </div>
+          <span id="review-total-count" class="text-xs font-bold px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 font-mono">
+            40 Questions
+          </span>
+        </div>
+
+        <div id="comprehensive-solutions-list" class="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==============================================
+       MODAL: QR CODE FOR PROJECTOR / SHARING
+  =============================================== -->
+  <div id="modal-qr-code" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 animate-popIn">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display font-bold text-base text-slate-900 dark:text-white">Scan to Join Battle</h3>
+        <button onclick="appController.toggleQRModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">Scan using any phone camera to automatically enter this classroom arena room.</p>
+
+      <div class="bg-white p-4 rounded-2xl inline-block shadow-inner mx-auto border border-slate-200">
+        <div id="modal-qrcode-canvas"></div>
+      </div>
+
+      <div class="font-mono font-black text-2xl text-indigo-600 tracking-widest" id="modal-qr-code-text">
+        ECO9
+      </div>
+
+      <button onclick="appController.toggleQRModal()" class="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold text-xs text-slate-700 dark:text-slate-300">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden Canvas for Certificate Generation -->
+  <canvas id="certificate-canvas" width="1200" height="800" class="hidden"></canvas>
+
+  <!-- ==============================================
+       FIREBASE INTEGRATION MODULE
+  =============================================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInAnonymously, 
+      signInWithCustomToken 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Application Environment Context
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ecomaster-quiz-v1';
+    
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let isFirebaseReady = false;
+
+    // Initialize Firebase
+    try {
+      const firebaseConfig = typeof __firebase_config !== 'undefined' 
+        ? JSON.parse(__firebase_config) 
+        : {
+            apiKey: "AIzaSyDummyKeyForFallbackOnly12345",
+            authDomain: "ecomaster-portal.firebaseapp.com",
+            projectId: "ecomaster-portal",
+            storageBucket: "ecomaster-portal.appspot.com"
+          };
+
+      const fbApp = initializeApp(firebaseConfig);
+      db = getFirestore(fbApp);
+      auth = getAuth(fbApp);
+
+      // Authenticate
+      const authenticateUser = async () => {
+        try {
+          let userCred;
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            userCred = await signInWithCustomToken(auth, __initial_auth_token);
+          } else {
+            userCred = await signInAnonymously(auth);
+          }
+          currentUser = userCred.user;
+          isFirebaseReady = true;
+          document.getElementById('badge-cloud-status').textContent = 'Cloud Active';
+          document.getElementById('badge-cloud-status').className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+        } catch (authErr) {
+          console.warn("Auth initialization note:", authErr.message);
+          document.getElementById('badge-cloud-status').textContent = 'Local Mode';
+        }
+      };
+
+      authenticateUser();
+    } catch (e) {
+      console.warn("Firebase initialization using fallback local channel:", e);
+      document.getElementById('badge-cloud-status').textContent = 'Local Mode';
+    }
+
+    // Expose Firebase Service Gateway to Window
+    window.CloudSyncService = {
+      isReady: () => isFirebaseReady && db !== null,
+      getUserId: () => currentUser ? currentUser.uid : ('guest_' + Math.random().toString(36).substring(2, 9)),
+      
+      // Subscribe to Room State in Realtime
+      subscribeRoom: (roomCode, onData, onError) => {
+        if (!isFirebaseReady || !db) {
+          if (onError) onError(new Error("Cloud not initialized"));
+          return () => {};
+        }
+        const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomCode.toUpperCase());
+        return onSnapshot(roomDocRef, (snap) => {
+          if (snap.exists()) {
+            onData(snap.data());
+          } else {
+            onData(null);
+          }
+        }, (err) => {
+          if (onError) onError(err);
+        });
+      },
+
+      // Update or create Room Document
+      saveRoomData: async (roomCode, data) => {
+        if (!isFirebaseReady || !db) return false;
+        try {
+          const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomCode.toUpperCase());
+          await setDoc(roomDocRef, data, { merge: true });
+          return true;
+        } catch (e) {
+          console.error("Error updating cloud room:", e);
+          return false;
+        }
+      }
+    };
+  </script>
+
+  <!-- ==============================================
+       AUDIO SYNTHESIZER MODULE
+  =============================================== -->
+  <script>
+    class WebAudioSynth {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+      }
+      toggle() {
+        this.enabled = !this.enabled;
+        const icon = document.getElementById('nav-sound-icon');
+        icon.setAttribute('data-lucide', this.enabled ? 'volume-2' : 'volume-x');
+        lucide.createIcons();
+      }
+      beep(freq, type = 'sine', duration = 0.12, gainLvl = 0.15) {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainLvl, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      playCorrect() {
+        this.beep(523.25, 'triangle', 0.08, 0.15); // C5
+        setTimeout(() => this.beep(659.25, 'triangle', 0.08, 0.15), 70); // E5
+        setTimeout(() => this.beep(783.99, 'sine', 0.2, 0.2), 140); // G5
+      }
+      playWrong() {
+        this.beep(200, 'sawtooth', 0.15, 0.12);
+        setTimeout(() => this.beep(140, 'sawtooth', 0.22, 0.12), 100);
+      }
+      playStreak() {
+        [440, 554, 659, 880].forEach((f, i) => {
+          setTimeout(() => this.beep(f, 'square', 0.14, 0.08), i * 70);
+        });
+      }
+      playWin() {
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          setTimeout(() => this.beep(f, 'triangle', 0.25, 0.15), i * 100);
+        });
+      }
+      playTick() {
+        this.beep(880, 'sine', 0.04, 0.04);
+      }
+    }
+    const soundFX = new WebAudioSynth();
+  </script>
+
+  <!-- ==============================================
+       QUESTIONS DATABASE (ALL 40 CURATED QUESTIONS)
+  =============================================== -->
+  <script>
+    const QUESTIONS_MASTER = [
+      // --- CHAPTER 7: PRODUCTION (Questions 1 to 20) ---
+      {
+        id: 1, chapter: 7, topic: "Production Basics", tier: "easy", pts: 100,
+        text: "In economics, how is the term 'production' defined?",
+        options: [
+          "The commercial advertising of goods in modern retail outlets",
+          "The transformation of inputs into output to satisfy human wants",
+          "The monetary investment made into stock market portfolios",
+          "The natural growth of crops without any human intervention"
+        ],
+        correct: 1,
+        explanation: "Production is defined as the transformation of inputs into output. The resources used are called inputs and goods/services created are called output."
+      },
+      {
+        id: 2, chapter: 7, topic: "Factors of Production", tier: "easy", pts: 100,
+        text: "Production results from the combined effort of four factors: Land, Labour, Capital, and ______.",
+        options: [
+          "Price elasticity",
+          "Entrepreneurship",
+          "Commercial subsidy",
+          "Monetary interest"
+        ],
+        correct: 1,
+        explanation: "The four factors of production (or inputs) are Land, Labour, Capital, and Entrepreneurship."
+      },
+      {
+        id: 3, chapter: 7, topic: "Production Function", tier: "medium", pts: 200,
+        text: "What does the 'production function' of an enterprise technically express?",
+        options: [
+          "The net financial profit earned by a company after corporate taxes",
+          "The technological relationship showing the maximum output producible from given inputs",
+          "The government tariff rate charged on exported manufactured goods",
+          "The legal contract signed between shareholders and factory workers"
+        ],
+        correct: 1,
+        explanation: "Production function states the technological relationship that specifies the maximum output that can be produced with given combinations of inputs."
+      },
+      {
+        id: 4, chapter: 7, topic: "Production Techniques", tier: "easy", pts: 100,
+        text: "When a farmer uses bullocks, manual ploughs, and family labour to produce food grains, they are using:",
+        options: [
+          "Capital-intensive technology",
+          "Labour-intensive technology",
+          "Automated robotic technology",
+          "Multi-national joint venture technology"
+        ],
+        correct: 1,
+        explanation: "When an enterprise uses more labour and less capital per unit of output, it is using labour-intensive technology."
+      },
+      {
+        id: 5, chapter: 7, topic: "Production Techniques", tier: "easy", pts: 100,
+        text: "When a business enterprise employs tractors, combine harvesters, and automated machinery on a large scale, it uses:",
+        options: [
+          "Labour-intensive technology",
+          "Capital-intensive technology",
+          "Subsistence farming technology",
+          "Product-based division of labour"
+        ],
+        correct: 1,
+        explanation: "Capital-intensive technology utilizes more capital equipment and less manual labour per unit of output."
+      },
+      {
+        id: 6, chapter: 7, topic: "Division of Labour", tier: "medium", pts: 200,
+        text: "A village potter who single-handedly gathers clay, shapes the pot on the wheel, and bakes it is an example of:",
+        options: [
+          "Process-based division of labour",
+          "Product-based division of labour",
+          "Technological displacement",
+          "Public sector enterprise"
+        ],
+        correct: 1,
+        explanation: "In product-based division of labour, an individual worker specializes in the complete production of a single good or service."
+      },
+      {
+        id: 7, chapter: 7, topic: "Division of Labour", tier: "medium", pts: 200,
+        text: "In Britannia Bread factory, worker A kneads dough, worker B bakes containers in ovens, and worker C slices and packs loaves. This represents:",
+        options: [
+          "Product-based division of labour",
+          "Process-based division of labour",
+          "Sole proprietorship operation",
+          "Unskilled manual labour"
+        ],
+        correct: 1,
+        explanation: "Process-based division of labour divides the production of a commodity into multiple steps where each worker specializes in one or two specific processes."
+      },
+      {
+        id: 8, chapter: 7, topic: "Average Product (AP)", tier: "easy", pts: 100,
+        text: "How is Average Product (AP) mathematically calculated from Total Product (TP) and labour units (L)?",
+        options: [
+          "AP = TP × L",
+          "AP = TP / L",
+          "AP = TP - L",
+          "AP = L / TP"
+        ],
+        correct: 1,
+        explanation: "Average Product is total output per unit of the variable input: AP = TP / L."
+      },
+      {
+        id: 9, chapter: 7, topic: "Marginal Product (MP)", tier: "medium", pts: 200,
+        text: "What is Marginal Product (MP) of labour?",
+        options: [
+          "The maximum possible output achievable by the entire factory",
+          "The addition to Total Product resulting from employing one extra unit of labour",
+          "The legally mandated minimum hourly wage",
+          "The total quantity of defective products discarded"
+        ],
+        correct: 1,
+        explanation: "Marginal Product (MP) is the change in Total Product resulting from adding one additional unit of variable input: MP = TP(L) - TP(L-1)."
+      },
+      {
+        id: 10, chapter: 7, topic: "MP Calculation", tier: "medium", pts: 200,
+        text: "1 worker stitches 2 shirts. When a 2nd worker joins, Total Product rises to 6 shirts. What is the MP of the 2nd worker?",
+        options: [
+          "2 shirts",
+          "3 shirts",
+          "4 shirts",
+          "6 shirts"
+        ],
+        correct: 2,
+        explanation: "MP(2) = TP(2) - TP(1) = 6 - 2 = 4 shirts."
+      },
+      {
+        id: 11, chapter: 7, topic: "AP Calculation", tier: "easy", pts: 100,
+        text: "If Total Product (TP) is 44 units when 4 units of labour are employed, what is the Average Product (AP)?",
+        options: [
+          "10 units",
+          "11 units",
+          "14 units",
+          "40 units"
+        ],
+        correct: 1,
+        explanation: "AP = TP / L = 44 / 4 = 11 units."
+      },
+      {
+        id: 12, chapter: 7, topic: "Law of Diminishing MP", tier: "hard", pts: 300,
+        text: "According to the Law of Diminishing Marginal Product, as variable labour is continuously added to a fixed machine:",
+        options: [
+          "Marginal product drops to negative values immediately with worker 1",
+          "Marginal product increases initially, but eventually decreases and can become negative",
+          "Total product increases infinitely at an accelerating rate",
+          "Average product remains strictly constant across all stages"
+        ],
+        correct: 1,
+        explanation: "Initially, specialization increases MP. But as the fixed factor becomes overcrowded, MP begins to decline and can turn negative."
+      },
+      {
+        id: 13, chapter: 7, topic: "TP and MP Relationship", tier: "hard", pts: 300,
+        text: "Total Product (TP) reaches its highest maximum level when Marginal Product (MP) is:",
+        options: [
+          "At its peak positive value",
+          "Exactly equal to 0",
+          "Negative (-2)",
+          "Equal to Average Product"
+        ],
+        correct: 1,
+        explanation: "When MP becomes 0, the last worker hired adds nothing to total output, marking the peak of Total Product (TP)."
+      },
+      {
+        id: 14, chapter: 7, topic: "Production Optimization", tier: "hard", pts: 300,
+        text: "Why should a rational producer stop hiring labour before Marginal Product becomes negative?",
+        options: [
+          "Because total output falls while the producer continues paying wages for unproductive labour",
+          "Because government law strictly forbids negative production figures",
+          "Because machinery immediately overheats under extra load",
+          "Because consumer demand automatically drops to zero"
+        ],
+        correct: 0,
+        explanation: "Hiring beyond zero MP causes Total Product to decline while increasing wage costs, reducing total profit."
+      },
+      {
+        id: 15, chapter: 7, topic: "Firm vs Industry", tier: "easy", pts: 100,
+        text: "What is the distinction between a 'firm' and an 'industry' in economic science?",
+        options: [
+          "A firm is government-run; an industry is private-run",
+          "A firm is an individual production unit, whereas an industry is the group of all firms making that commodity",
+          "A firm manufactures goods; an industry provides only services",
+          "There is no distinction; both words are synonyms"
+        ],
+        correct: 1,
+        explanation: "Bata is an individual firm; all footwear manufacturers (Bata, Nike, Adidas, etc.) together constitute the shoe industry."
+      },
+      {
+        id: 16, chapter: 7, topic: "Enterprise Ownership", tier: "medium", pts: 200,
+        text: "In a standard Partnership firm, what is the maximum number of partners permitted by law?",
+        options: [
+          "5 partners",
+          "10 partners",
+          "20 partners",
+          "50 partners"
+        ],
+        correct: 2,
+        explanation: "As specified in the module, a partnership enterprise can have a maximum of 20 partners."
+      },
+      {
+        id: 17, chapter: 7, topic: "Corporate Formations", tier: "medium", pts: 200,
+        text: "For a Public Limited Company established under the Companies Act, what are the minimum and maximum shareholder limits?",
+        options: [
+          "Minimum 2, Maximum 50",
+          "Minimum 7, Maximum No limit",
+          "Minimum 10, Maximum 100",
+          "Minimum 20, Maximum 1,000"
+        ],
+        correct: 1,
+        explanation: "A public limited company requires at least 7 shareholders and has no upper maximum limit."
+      },
+      {
+        id: 18, chapter: 7, topic: "Cooperatives", tier: "medium", pts: 200,
+        text: "Under the Cooperative Societies Act, 1912, what is the minimum number of members needed to register a cooperative society?",
+        options: [
+          "2 members",
+          "7 members",
+          "10 members",
+          "25 members"
+        ],
+        correct: 2,
+        explanation: "A minimum of 10 persons is required to register a cooperative society under the Cooperative Societies Act, 1912."
+      },
+      {
+        id: 19, chapter: 7, topic: "Public Enterprises", tier: "medium", pts: 200,
+        text: "Which of the following is an example of a Government Departmental Enterprise under direct ministerial administration?",
+        options: [
+          "Indian Railways (under Ministry of Railways)",
+          "Life Insurance Corporation (LIC)",
+          "Hindustan Machine Tools (HMT)",
+          "Reliance Industries Limited"
+        ],
+        correct: 0,
+        explanation: "Indian Railways is a Departmental Enterprise managed directly by the Ministry of Railways."
+      },
+      {
+        id: 20, chapter: 7, topic: "Foreign Production Units", tier: "hard", pts: 300,
+        text: "An enterprise operating within India is legally treated as a foreign production unit if:",
+        options: [
+          "It employs foreign engineers on contract",
+          "More than 50% of its total capital is contributed by foreigners or non-residents",
+          "It uses imported machinery in its assembly line",
+          "It bills its customers in foreign currency"
+        ],
+        correct: 1,
+        explanation: "When non-residents contribute more than 50% of the total capital, the enterprise is classified as a foreign production unit."
+      },
+
+      // --- CHAPTER 8: COST AND REVENUE (Questions 21 to 40) ---
+      {
+        id: 21, chapter: 8, topic: "Meaning of Cost", tier: "easy", pts: 100,
+        text: "How is 'cost of production' defined in economics?",
+        options: [
+          "The maximum price a buyer offers in an open auction",
+          "The money expenditure incurred by a producer to hire or purchase factors of production and raw materials",
+          "The residual dividend transferred to shareholders",
+          "The physical wear-and-tear of plant machinery"
+        ],
+        correct: 1,
+        explanation: "Cost is the money expenditure incurred by a producer to purchase or hire factors of production and raw materials."
+      },
+      {
+        id: 22, chapter: 8, topic: "Fixed Costs", tier: "easy", pts: 100,
+        text: "Which statement correctly describes Total Fixed Cost (TFC)?",
+        options: [
+          "It increases linearly with every unit produced",
+          "It is compulsory and must be paid even if output is completely zero",
+          "It consists solely of casual daily labour wages",
+          "It drops to zero whenever electricity is shut down"
+        ],
+        correct: 1,
+        explanation: "Fixed costs (such as land rent or contractual equipment lease) are compulsory and do not change with the level of output."
+      },
+      {
+        id: 23, chapter: 8, topic: "Variable Costs", tier: "easy", pts: 100,
+        text: "Expenditures incurred on raw materials (like seeds and fertilizer) and wages of temporary labour are:",
+        options: [
+          "Fixed Costs",
+          "Variable Costs",
+          "Implicit Sunk Costs",
+          "Administrative Overhead Costs"
+        ],
+        correct: 1,
+        explanation: "Variable costs vary directly with the level of output produced."
+      },
+      {
+        id: 24, chapter: 8, topic: "Explicit Costs", tier: "medium", pts: 200,
+        text: "Explicit costs incurred by a business firm are characterized by:",
+        options: [
+          "Direct cash payments to external parties, recorded on bills, receipts, or vouchers",
+          "Estimated market rental values of self-owned properties",
+          "Unpaid sacrifices made by the business founder",
+          "Purely imaginary economic accounting entries"
+        ],
+        correct: 0,
+        explanation: "Explicit costs involve direct out-of-pocket cash payments documented with vouchers, invoices, and payment receipts."
+      },
+      {
+        id: 25, chapter: 8, topic: "Implicit Costs", tier: "hard", pts: 300,
+        text: "A farmer uses their own tractor for plowing instead of hiring one for Rs. 3,000. This forgone rental income is classified as:",
+        options: [
+          "Explicit Cost",
+          "Implicit Cost",
+          "Variable Overhead Surcharge",
+          "Excise Duty"
+        ],
+        correct: 1,
+        explanation: "Implicit cost is the imputed market value of self-supplied factors of production for which no direct out-of-pocket cash is paid."
+      },
+      {
+        id: 26, chapter: 8, topic: "Total Cost Equation", tier: "easy", pts: 100,
+        text: "Which formula expresses the calculation of Total Cost (TC)?",
+        options: [
+          "TC = Total Fixed Cost + Total Variable Cost",
+          "TC = Total Fixed Cost - Total Variable Cost",
+          "TC = Total Revenue / Total Output",
+          "TC = Marginal Cost × Total Output"
+        ],
+        correct: 0,
+        explanation: "Total Cost is the sum of total fixed cost and total variable cost: TC = TFC + TVC."
+      },
+      {
+        id: 27, chapter: 8, topic: "TC Calculation", tier: "medium", pts: 200,
+        text: "A producer incurs Total Fixed Cost of Rs. 180 and Total Variable Cost of Rs. 300 to manufacture 48 units. What is Total Cost?",
+        options: [
+          "Rs. 120",
+          "Rs. 300",
+          "Rs. 480",
+          "Rs. 540"
+        ],
+        correct: 2,
+        explanation: "TC = TFC + TVC = 180 + 300 = Rs. 480."
+      },
+      {
+        id: 28, chapter: 8, topic: "Average Cost (AC)", tier: "easy", pts: 100,
+        text: "If Total Cost is Rs. 480 for producing 48 units of a product, what is the Average Cost (AC)?",
+        options: [
+          "Rs. 8 per unit",
+          "Rs. 10 per unit",
+          "Rs. 12 per unit",
+          "Rs. 48 per unit"
+        ],
+        correct: 1,
+        explanation: "AC = Total Cost / Total Output = 480 / 48 = Rs. 10 per unit."
+      },
+      {
+        id: 29, chapter: 8, topic: "Marginal Cost (MC)", tier: "medium", pts: 200,
+        text: "Marginal Cost (MC) is defined as:",
+        options: [
+          "The total expenditure divided by the price of inputs",
+          "The increase in total cost resulting from producing one additional unit of output",
+          "The fixed cost associated with land acquisition",
+          "The net profit margin per unit"
+        ],
+        correct: 1,
+        explanation: "Marginal Cost (MC) is the addition to Total Cost when output is increased by one unit: MC = TC(Q) - TC(Q-1)."
+      },
+      {
+        id: 30, chapter: 8, topic: "MC Calculation", tier: "hard", pts: 300,
+        text: "A tailor produces 10 shirts at TC of Rs. 1,110. Producing 11 shirts increases TC to Rs. 1,199. What is Marginal Cost?",
+        options: [
+          "Rs. 89",
+          "Rs. 99",
+          "Rs. 109",
+          "Rs. 111"
+        ],
+        correct: 0,
+        explanation: "MC = TC(11) - TC(10) = 1,199 - 1,110 = Rs. 89."
+      },
+      {
+        id: 31, chapter: 8, topic: "Total Revenue", tier: "easy", pts: 100,
+        text: "What alternative term is commonly used for Total Revenue in economic analysis?",
+        options: [
+          "Gross Domestic Product",
+          "Total sales proceeds",
+          "Marginal factor expenditure",
+          "Depreciation reserve fund"
+        ],
+        correct: 1,
+        explanation: "Total Revenue is also known as total sales proceeds because it represents money received from selling output."
+      },
+      {
+        id: 32, chapter: 8, topic: "TR Calculation", tier: "medium", pts: 200,
+        text: "A farmer sells 30 quintals of rice at a market price of Rs. 1,600 per quintal. What is Total Revenue?",
+        options: [
+          "Rs. 16,000",
+          "Rs. 32,000",
+          "Rs. 48,000",
+          "Rs. 54,000"
+        ],
+        correct: 2,
+        explanation: "TR = Price × Quantity = 1,600 × 30 = Rs. 48,000."
+      },
+      {
+        id: 33, chapter: 8, topic: "TR Calculation", tier: "easy", pts: 100,
+        text: "A trader sells 1 quintal (100 kg) of wheat at a price of Rs. 15 per kg. What is the Total Revenue?",
+        options: [
+          "Rs. 150",
+          "Rs. 1,000",
+          "Rs. 1,500",
+          "Rs. 15,000"
+        ],
+        correct: 2,
+        explanation: "TR = Price × Quantity = 15 × 100 = Rs. 1,500."
+      },
+      {
+        id: 34, chapter: 8, topic: "Average Revenue (AR)", tier: "medium", pts: 200,
+        text: "For a firm selling a single commodity, how are Average Revenue (AR) and unit Price (P) related?",
+        options: [
+          "AR is always double the unit Price",
+          "Average Revenue and Price are strictly equal (AR = P)",
+          "AR is always lower than Price due to logistics",
+          "There is no direct relationship between AR and Price"
+        ],
+        correct: 1,
+        explanation: "AR = TR / Q = (P × Q) / Q = P. Therefore, Average Revenue is identical to unit Price."
+      },
+      {
+        id: 35, chapter: 8, topic: "AR and MR Dynamics", tier: "hard", pts: 300,
+        text: "When a seller can sell successive quantities of a commodity at a constant price of Rs. 50, what is the relation between AR and MR?",
+        options: [
+          "MR is always higher than AR",
+          "AR and MR are equal (AR = MR = Rs. 50)",
+          "MR drops to 0 immediately after 2 units",
+          "AR rises while MR falls"
+        ],
+        correct: 1,
+        explanation: "When market price remains constant, each additional unit sold adds exactly the unit price to total revenue, making AR = MR = Price."
+      },
+      {
+        id: 36, chapter: 8, topic: "MR Math with Changing Price", tier: "hard", pts: 300,
+        text: "A vendor sells 10 kg of rice at Rs. 30/kg (TR = Rs. 300). To sell 11 kg, price drops to Rs. 29/kg (TR = Rs. 319). What is MR of the 11th kg?",
+        options: [
+          "Rs. 19",
+          "Rs. 29",
+          "Rs. 30",
+          "Rs. -1"
+        ],
+        correct: 0,
+        explanation: "MR = TR(11) - TR(10) = 319 - 300 = Rs. 19."
+      },
+      {
+        id: 37, chapter: 8, topic: "Profit Definition", tier: "easy", pts: 100,
+        text: "In economic theory, how is Profit calculated?",
+        options: [
+          "Profit = Total Revenue + Total Cost",
+          "Profit = Total Revenue - Total Cost",
+          "Profit = Average Revenue × Average Cost",
+          "Profit = Fixed Cost - Variable Cost"
+        ],
+        correct: 1,
+        explanation: "Profit is defined as the surplus of total revenue over total cost: Profit = TR - TC."
+      },
+      {
+        id: 38, chapter: 8, topic: "Profit Calculation", tier: "hard", pts: 300,
+        text: "A firm sells 50 units at Rs. 10 each. Its Fixed Cost is Rs. 110 and Variable Cost is Rs. 150. What is its total profit?",
+        options: [
+          "Rs. 180",
+          "Rs. 240",
+          "Rs. 260",
+          "Rs. 500"
+        ],
+        correct: 1,
+        explanation: "TR = 50 × 10 = Rs. 500. TC = 110 + 150 = Rs. 260. Profit = TR - TC = 500 - 260 = Rs. 240."
+      },
+      {
+        id: 39, chapter: 7, topic: "Diminishing Returns Math", tier: "hard", pts: 300,
+        text: "With 8 labourers, TP is 56. When 9 labourers work, TP falls to 54. What is the Marginal Product of the 9th labourer?",
+        options: [
+          "0 units",
+          "2 units",
+          "-2 units",
+          "-4 units"
+        ],
+        correct: 2,
+        explanation: "MP(9) = TP(9) - TP(8) = 54 - 56 = -2 units."
+      },
+      {
+        id: 40, chapter: 7, topic: "Collaboration Units", tier: "medium", pts: 200,
+        text: "Maruti-Suzuki Limited, in which Indian and Japanese partners jointly contribute equity and technology, exemplifies a:",
+        options: [
+          "Sole proprietorship",
+          "100% Departmental enterprise",
+          "Collaboration production unit",
+          "Village cottage enterprise"
+        ],
+        correct: 2,
+        explanation: "Collaborations are production units in which foreign and domestic entrepreneurs participate jointly."
+      }
+    ];
+
+    const AVATAR_OPTIONS = [
+      { id: '1', emoji: '👨‍💼', label: 'Analyst' },
+      { id: '2', emoji: '👩‍🎓', label: 'Scholar' },
+      { id: '3', emoji: '🌾', label: 'Farmer' },
+      { id: '4', emoji: '⚙️', label: 'Producer' },
+      { id: '5', emoji: '💡', label: 'Innovator' },
+      { id: '6', emoji: '📈', label: 'Investor' },
+      { id: '7', emoji: '🏛️', label: 'Minister' },
+      { id: '8', emoji: '🚀', label: 'Founder' }
+    ];
+  </script>
+
+  <!-- ==============================================
+       APP LOGIC & REALTIME STATE CONTROLLER
+  =============================================== -->
+  <script>
+    class EcoMasterApp {
+      constructor() {
+        this.playerName = 'Scholar';
+        this.playerAvatar = AVATAR_OPTIONS[0].emoji;
+        this.roomCode = '';
+        this.isHost = false;
+        this.isSolo = false;
+        this.matchLength = 40;
+
+        // Firebase Realtime Unsubscribe Handle
+        this.roomUnsubscribe = null;
+        this.myUserId = 'user_' + Math.random().toString(36).substring(2, 9);
+
+        // Quiz State
+        this.currentQuestions = [];
+        this.currentQIndex = 0;
+        this.score = 0;
+        this.streak = 0;
+        this.maxStreak = 0;
+        this.userSelections = {}; // { qIdx: selectedOption }
+        this.timerInterval = null;
+        this.secondsLeft = 20;
+
+        // Local Roster fallback (for offline or local practice)
+        this.cachedRoomState = null;
+
+        this.init();
+      }
+
+      init() {
+        this.initTheme();
+        this.renderAvatarPicker();
+        this.checkUrlForRoomParams();
+      }
+
+      initTheme() {
+        const savedTheme = localStorage.getItem('ecomaster_theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+          document.getElementById('nav-theme-icon').setAttribute('data-lucide', 'sun');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.getElementById('nav-theme-icon').setAttribute('data-lucide', 'moon');
+        }
+      }
+
+      toggleTheme() {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('ecomaster_theme', isDark ? 'dark' : 'light');
+        document.getElementById('nav-theme-icon').setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        lucide.createIcons();
+      }
+
+      renderAvatarPicker() {
+        const grid = document.getElementById('avatar-grid-picker');
+        grid.innerHTML = AVATAR_OPTIONS.map((item, idx) => `
+          <button type="button" onclick="appController.selectAvatar('${item.emoji}', this)"
+            class="avatar-btn p-2 rounded-2xl border-2 flex flex-col items-center justify-center transition ${
+              idx === 0 ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/70' : 'border-slate-200 dark:border-slate-800'
+            }">
+            <span class="text-2xl">${item.emoji}</span>
+            <span class="text-[9px] font-bold text-slate-500 mt-0.5 truncate">${item.label}</span>
+          </button>
+        `).join('');
+      }
+
+      selectAvatar(emoji, element) {
+        this.playerAvatar = emoji;
+        document.querySelectorAll('.avatar-btn').forEach(b => {
+          b.className = 'avatar-btn p-2 rounded-2xl border-2 border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center transition';
+        });
+        element.className = 'avatar-btn p-2 rounded-2xl border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-950/70 flex flex-col items-center justify-center transition';
+        soundFX.beep(480, 'sine', 0.05);
+      }
+
+      checkUrlForRoomParams() {
+        // Support ?room=CODE or #room=CODE
+        const searchParams = new URLSearchParams(window.location.search);
+        let roomCode = searchParams.get('room');
+        if (!roomCode && window.location.hash.includes('room=')) {
+          roomCode = window.location.hash.split('room=')[1]?.split('&')[0];
+        }
+        if (roomCode) {
+          document.getElementById('input-room-code').value = roomCode.toUpperCase();
+        }
+      }
+
+      readPlayerNameInput() {
+        const inputVal = document.getElementById('input-player-name').value.trim();
+        this.playerName = inputVal || 'Student ' + Math.floor(10 + Math.random() * 90);
+        if (window.CloudSyncService) {
+          this.myUserId = window.CloudSyncService.getUserId();
+        }
+      }
+
+      setMatchLength(length) {
+        this.matchLength = length;
+        [10, 20, 40].forEach(len => {
+          const btn = document.getElementById(`btn-length-${len}`);
+          if (len === length) {
+            btn.className = 'length-btn px-3 py-1 rounded-lg text-xs font-bold border-indigo-600 bg-indigo-600 text-white';
+          } else {
+            btn.className = 'length-btn px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-700';
+          }
+        });
+      }
+
+      // Host creates a room
+      async createHostRoom() {
+        this.readPlayerNameInput();
+        const suffixes = ['9', '42', '88', '77', '12', '99', '50'];
+        const chosen = suffixes[Math.floor(Math.random() * suffixes.length)];
+        const code = 'ECO' + chosen;
+
+        this.isHost = true;
+        this.isSolo = false;
+        this.roomCode = code;
+
+        // Prepare Questions set
+        const selectedQuestions = [...QUESTIONS_MASTER]
+          .sort(() => Math.random() - 0.5)
+          .slice(0, this.matchLength);
+
+        const initialRoomState = {
+          code: code,
+          hostName: this.playerName,
+          status: 'LOBBY', // 'LOBBY' | 'IN_GAME' | 'FINISHED'
+          questionIds: selectedQuestions.map(q => q.id),
+          createdAt: Date.now(),
+          players: {
+            [this.myUserId]: {
+              id: this.myUserId,
+              name: this.playerName,
+              avatar: this.playerAvatar,
+              score: 0,
+              streak: 0,
+              isHost: true
+            }
+          }
+        };
+
+        this.setupLobbyView(code);
+
+        // Save to Firebase
+        if (window.CloudSyncService.isReady()) {
+          await window.CloudSyncService.saveRoomData(code, initialRoomState);
+        } else {
+          // Local fallback
+          this.cachedRoomState = initialRoomState;
+          this.renderLobbyRoster(initialRoomState.players);
+        }
+
+        this.listenToRoom(code);
+      }
+
+      // Student joins by room code
+      async joinRoomByInput() {
+        this.readPlayerNameInput();
+        const code = document.getElementById('input-room-code').value.trim().toUpperCase();
+        if (!code) {
+          alert('Please enter a valid room code (e.g. ECO9)');
+          return;
+        }
+
+        this.isHost = false;
+        this.isSolo = false;
+        this.roomCode = code;
+
+        this.setupLobbyView(code);
+
+        if (window.CloudSyncService.isReady()) {
+          // Add self to players in Firebase
+          const joinPayload = {
+            [`players.${this.myUserId}`]: {
+              id: this.myUserId,
+              name: this.playerName,
+              avatar: this.playerAvatar,
+              score: 0,
+              streak: 0,
+              isHost: false
+            }
+          };
+          await window.CloudSyncService.saveRoomData(code, joinPayload);
+        }
+
+        this.listenToRoom(code);
+      }
+
+      setupLobbyView(code) {
+        document.getElementById('lobby-room-code-display').textContent = code;
+        document.getElementById('modal-qr-code-text').textContent = code;
+        
+        // Show nav room badge
+        const badge = document.getElementById('nav-room-badge');
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+        document.getElementById('nav-room-code-label').textContent = 'ROOM: ' + code;
+
+        // Render QR Code for students
+        const qrContainer = document.getElementById('modal-qrcode-canvas');
+        qrContainer.innerHTML = '';
+        const joinUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
+        try {
+          new QRCode(qrContainer, {
+            text: joinUrl,
+            width: 170,
+            height: 170,
+            colorDark: "#312e81",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch (e) {}
+
+        // Configure Host vs Student Controls
+        const actionBox = document.getElementById('host-action-container');
+        if (this.isHost) {
+          actionBox.innerHTML = `
+            <button onclick="appController.startBattleMatch()" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-display font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/25 transition">
+              <span>Start Battle for All!</span>
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            </button>
+          `;
+        } else {
+          actionBox.innerHTML = `
+            <div class="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold">
+              <span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+              <span>Waiting for teacher/host to start match...</span>
+            </div>
+          `;
+        }
+        lucide.createIcons();
+
+        this.showView('view-room-lobby');
+      }
+
+      listenToRoom(code) {
+        if (this.roomUnsubscribe) {
+          this.roomUnsubscribe();
+          this.roomUnsubscribe = null;
+        }
+
+        if (window.CloudSyncService.isReady()) {
+          this.roomUnsubscribe = window.CloudSyncService.subscribeRoom(
+            code,
+            (roomData) => this.handleRoomUpdate(roomData),
+            (err) => console.warn("Firestore subscription error:", err)
+          );
+        }
+      }
+
+      handleRoomUpdate(roomData) {
+        if (!roomData) return;
+        this.cachedRoomState = roomData;
+
+        // If game transitions to IN_GAME and player is still in lobby
+        if (roomData.status === 'IN_GAME') {
+          const currentVisible = document.getElementById('view-quiz-arena').classList.contains('hidden');
+          if (currentVisible) {
+            // Reconstruct questions set
+            if (roomData.questionIds && roomData.questionIds.length > 0) {
+              this.currentQuestions = roomData.questionIds
+                .map(id => QUESTIONS_MASTER.find(q => q.id === id))
+                .filter(Boolean);
+            }
+            this.launchQuizSession();
+          }
+        }
+
+        // Render Lobby Players
+        if (roomData.players) {
+          this.renderLobbyRoster(roomData.players);
+          this.renderArenaLeaderboard(roomData.players);
+        }
+      }
+
+      renderLobbyRoster(playersMap) {
+        const container = document.getElementById('lobby-players-list');
+        const list = Object.values(playersMap || {});
+        document.getElementById('lobby-player-counter').textContent = `${list.length} Player${list.length !== 1 ? 's' : ''}`;
+
+        container.innerHTML = list.map(p => `
+          <div class="flex items-center space-x-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 animate-popIn">
+            <span class="text-2xl">${p.avatar}</span>
+            <div class="truncate">
+              <span class="font-bold text-xs text-slate-800 dark:text-slate-200 block truncate">${p.name}</span>
+              ${p.isHost ? '<span class="text-[9px] font-black text-indigo-500 uppercase">Host</span>' : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+
+      async startBattleMatch() {
+        if (window.CloudSyncService.isReady()) {
+          await window.CloudSyncService.saveRoomData(this.roomCode, {
+            status: 'IN_GAME'
+          });
+        } else {
+          // Local fallback
+          this.currentQuestions = [...QUESTIONS_MASTER].slice(0, this.matchLength);
+          this.launchQuizSession();
+        }
+      }
+
+      startSoloMode() {
+        this.readPlayerNameInput();
+        this.isHost = true;
+        this.isSolo = true;
+        this.roomCode = 'SOLO';
+
+        this.currentQuestions = [...QUESTIONS_MASTER]
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 40);
+
+        this.cachedRoomState = {
+          players: {
+            [this.myUserId]: { id: this.myUserId, name: this.playerName, avatar: this.playerAvatar, score: 0, streak: 0 },
+            'bot_arjun': { id: 'bot_arjun', name: 'Arjun P.', avatar: '👨‍💼', score: 0, streak: 0 },
+            'bot_priya': { id: 'bot_priya', name: 'Priya V.', avatar: '👩‍🎓', score: 0, streak: 0 }
+          }
+        };
+
+        this.launchQuizSession();
+      }
+
+      launchQuizSession() {
+        if (!this.currentQuestions || this.currentQuestions.length === 0) {
+          this.currentQuestions = [...QUESTIONS_MASTER].slice(0, this.matchLength);
+        }
+
+        this.currentQIndex = 0;
+        this.score = 0;
+        this.streak = 0;
+        this.maxStreak = 0;
+        this.userSelections = {};
+
+        // Setup HUD
+        document.getElementById('hud-name-display').textContent = this.playerName;
+        document.getElementById('hud-avatar-box').textContent = this.playerAvatar;
+        document.getElementById('hud-mode-pill').textContent = 'ROOM: ' + this.roomCode;
+        document.getElementById('hud-score-display').textContent = '0';
+        document.getElementById('hud-streak-counter').textContent = '0 Streak';
+
+        this.showView('view-quiz-arena');
+        this.loadQuestionAt(0);
+        soundFX.playStreak();
+      }
+
+      loadQuestionAt(idx) {
+        if (idx < 0 || idx >= this.currentQuestions.length) {
+          this.finishBattle();
+          return;
+        }
+
+        this.currentQIndex = idx;
+        const q = this.currentQuestions[idx];
+
+        // Progress line
+        const pct = ((idx + 1) / this.currentQuestions.length) * 100;
+        document.getElementById('hud-progress-meter').style.width = pct + '%';
+
+        // Pills
+        document.getElementById('arena-q-index-pill').textContent = `Q${idx + 1} / ${this.currentQuestions.length}`;
+        document.getElementById('arena-q-topic-pill').textContent = `${q.topic} (Ch ${q.chapter})`;
+
+        // Tier Badge
+        const tierBadge = document.getElementById('arena-q-tier-pill');
+        if (q.tier === 'easy') {
+          tierBadge.className = 'text-xs font-black px-2.5 py-1 rounded-full uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+          tierBadge.textContent = '🟢 Easy (+100)';
+        } else if (q.tier === 'medium') {
+          tierBadge.className = 'text-xs font-black px-2.5 py-1 rounded-full uppercase bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+          tierBadge.textContent = '🟡 Medium (+200)';
+        } else {
+          tierBadge.className = 'text-xs font-black px-2.5 py-1 rounded-full uppercase bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+          tierBadge.textContent = '🔴 Analytical (+300)';
+        }
+
+        document.getElementById('arena-question-text').textContent = q.text;
+        document.getElementById('arena-explanation-card').classList.add('hidden');
+        document.getElementById('arena-status-message').textContent = 'Select the correct option';
+        
+        const nextBtn = document.getElementById('btn-arena-next');
+        nextBtn.disabled = true;
+        nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        // Render Options
+        const optBox = document.getElementById('arena-options-container');
+        optBox.innerHTML = q.options.map((opt, oIdx) => {
+          const letter = String.fromCharCode(65 + oIdx);
+          return `
+            <button onclick="appController.selectOptionAnswer(${oIdx})" id="arena-opt-${oIdx}"
+              class="w-full p-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-left font-medium text-sm sm:text-base flex items-center justify-between transition group">
+              <div class="flex items-center space-x-3">
+                <span class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-600 dark:text-slate-300 group-hover:bg-indigo-600 group-hover:text-white transition">
+                  ${letter}
+                </span>
+                <span class="text-slate-800 dark:text-slate-200">${opt}</span>
+              </div>
+            </button>
+          `;
+        }).join('');
+
+        this.startCountdownTimer();
+        if (this.cachedRoomState && this.cachedRoomState.players) {
+          this.renderArenaLeaderboard(this.cachedRoomState.players);
+        }
+      }
+
+      startCountdownTimer() {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.secondsLeft = 20;
+        document.getElementById('hud-timer-display').textContent = this.secondsLeft + 's';
+
+        this.timerInterval = setInterval(() => {
+          this.secondsLeft--;
+          document.getElementById('hud-timer-display').textContent = this.secondsLeft + 's';
+
+          if (this.secondsLeft <= 5 && this.secondsLeft > 0) {
+            soundFX.playTick();
+          }
+
+          if (this.secondsLeft <= 0) {
+            clearInterval(this.timerInterval);
+            if (!(this.currentQIndex in this.userSelections)) {
+              this.selectOptionAnswer(-1); // Timeout
+            }
+          }
+        }, 1000);
+      }
+
+      async selectOptionAnswer(chosenIndex) {
+        if (this.currentQIndex in this.userSelections) return;
+        if (this.timerInterval) clearInterval(this.timerInterval);
+
+        const q = this.currentQuestions[this.currentQIndex];
+        this.userSelections[this.currentQIndex] = chosenIndex;
+        const isCorrect = chosenIndex === q.correct;
+
+        // Button Styling
+        q.options.forEach((_, idx) => {
+          const btn = document.getElementById('arena-opt-' + idx);
+          if (!btn) return;
+          btn.disabled = true;
+
+          if (idx === q.correct) {
+            btn.className = 'w-full p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-bold flex items-center justify-between';
+          } else if (idx === chosenIndex) {
+            btn.className = 'w-full p-4 rounded-2xl border-2 border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 line-through flex items-center justify-between';
+          } else {
+            btn.className = 'w-full p-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 opacity-40 text-slate-400 flex items-center justify-between';
+          }
+        });
+
+        // Scoring Logic: Points + Speed bonus + Streak Multiplier
+        if (isCorrect) {
+          this.streak++;
+          if (this.streak > this.maxStreak) this.maxStreak = this.streak;
+
+          let multiplier = 1.0;
+          if (this.streak >= 5) multiplier = 2.0;
+          else if (this.streak >= 3) multiplier = 1.5;
+          else if (this.streak >= 2) multiplier = 1.2;
+
+          const speedBonus = Math.max(0, this.secondsLeft * 3);
+          const pointsEarned = Math.round((q.pts + speedBonus) * multiplier);
+          this.score += pointsEarned;
+
+          soundFX.playCorrect();
+          if (multiplier > 1.0) soundFX.playStreak();
+
+          const statusElem = document.getElementById('arena-status-message');
+          statusElem.textContent = `Correct! +${pointsEarned} pts (Speed: +${speedBonus})`;
+          statusElem.className = 'text-xs font-black text-emerald-600';
+        } else {
+          this.streak = 0;
+          soundFX.playWrong();
+          const statusElem = document.getElementById('arena-status-message');
+          statusElem.textContent = chosenIndex === -1 ? 'Time Expired! (0 pts)' : 'Incorrect! (0 pts)';
+          statusElem.className = 'text-xs font-black text-rose-600';
+        }
+
+        // Explanation Card
+        const expCard = document.getElementById('arena-explanation-card');
+        expCard.classList.remove('hidden');
+        if (isCorrect) {
+          expCard.className = 'mt-6 p-4 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 text-sm animate-popIn';
+          document.getElementById('arena-explanation-icon').textContent = '✅';
+          document.getElementById('arena-explanation-header').textContent = 'Outstanding Reasoning!';
+          document.getElementById('arena-explanation-header').className = 'font-bold text-emerald-800 dark:text-emerald-300 text-sm';
+        } else {
+          expCard.className = 'mt-6 p-4 rounded-2xl border border-rose-300 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-950/40 text-sm animate-popIn';
+          document.getElementById('arena-explanation-icon').textContent = '📘';
+          document.getElementById('arena-explanation-header').textContent = 'Concept Explanation:';
+          document.getElementById('arena-explanation-header').className = 'font-bold text-rose-800 dark:text-rose-300 text-sm';
+        }
+        document.getElementById('arena-explanation-body').textContent = q.explanation;
+
+        // Update HUD display
+        document.getElementById('hud-score-display').textContent = this.score;
+        document.getElementById('hud-streak-counter').textContent = `${this.streak} Streak`;
+
+        const multiBadge = document.getElementById('hud-multiplier-badge');
+        if (this.streak >= 2) {
+          multiBadge.classList.remove('hidden');
+          multiBadge.textContent = `${this.streak >= 5 ? '2.0x' : this.streak >= 3 ? '1.5x' : '1.2x'} MULTIPLIER!`;
+        } else {
+          multiBadge.classList.add('hidden');
+        }
+
+        // Enable Next Button
+        const nextBtn = document.getElementById('btn-arena-next');
+        nextBtn.disabled = false;
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+        // Cloud Realtime Score Sync
+        if (window.CloudSyncService.isReady() && this.roomCode !== 'SOLO') {
+          await window.CloudSyncService.saveRoomData(this.roomCode, {
+            [`players.${this.myUserId}.score`]: this.score,
+            [`players.${this.myUserId}.streak`]: this.streak
+          });
+        } else if (this.isSolo && this.cachedRoomState) {
+          // Update solo bots
+          this.cachedRoomState.players[this.myUserId].score = this.score;
+          this.cachedRoomState.players[this.myUserId].streak = this.streak;
+          ['bot_arjun', 'bot_priya'].forEach(bId => {
+            if (Math.random() > 0.3) {
+              this.cachedRoomState.players[bId].score += Math.floor(100 + Math.random() * 180);
+              this.cachedRoomState.players[bId].streak = (this.cachedRoomState.players[bId].streak || 0) + 1;
+            } else {
+              this.cachedRoomState.players[bId].streak = 0;
+            }
+          });
+          this.renderArenaLeaderboard(this.cachedRoomState.players);
+        }
+      }
+
+      renderArenaLeaderboard(playersMap) {
+        const container = document.getElementById('arena-leaderboard-items');
+        if (!container) return;
+        const sorted = Object.values(playersMap || {}).sort((a, b) => (b.score || 0) - (a.score || 0));
+
+        container.innerHTML = sorted.map((p, idx) => {
+          const isMe = p.id === this.myUserId;
+          let rankMedal = `${idx + 1}`;
+          if (idx === 0) rankMedal = '🥇';
+          if (idx === 1) rankMedal = '🥈';
+          if (idx === 2) rankMedal = '🥉';
+
+          return `
+            <div class="flex items-center justify-between p-3 rounded-2xl border transition ${
+              isMe ? 'bg-indigo-50/80 dark:bg-indigo-950/70 border-indigo-300 dark:border-indigo-800 shadow-sm' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+            }">
+              <div class="flex items-center space-x-2.5">
+                <span class="font-black text-xs w-4 text-center">${rankMedal}</span>
+                <span class="text-xl">${p.avatar}</span>
+                <div>
+                  <span class="font-bold text-xs block text-slate-900 dark:text-white truncate max-w-[110px]">
+                    ${p.name} ${isMe ? '(You)' : ''}
+                  </span>
+                  <span class="text-[10px] text-amber-500 font-bold">
+                    ${p.streak || 0} Streak
+                  </span>
+                </div>
+              </div>
+              <span class="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                ${p.score || 0} pts
+              </span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      advanceNextQuestion() {
+        if (this.currentQIndex < this.currentQuestions.length - 1) {
+          this.loadQuestionAt(this.currentQIndex + 1);
+        } else {
+          this.finishBattle();
+        }
+      }
+
+      confirmQuitBattle() {
+        if (confirm("Are you sure you want to leave this battle match?")) {
+          if (this.timerInterval) clearInterval(this.timerInterval);
+          this.goHome();
+        }
+      }
+
+      finishBattle() {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+
+        const playersMap = this.cachedRoomState ? this.cachedRoomState.players : { [this.myUserId]: { name: this.playerName, avatar: this.playerAvatar, score: this.score } };
+        const sorted = Object.values(playersMap).sort((a, b) => (b.score || 0) - (a.score || 0));
+
+        // Podium top 3
+        const p1 = sorted[0] || { name: 'Player 1', avatar: '🥇', score: 0 };
+        const p2 = sorted[1] || { name: 'Player 2', avatar: '🥈', score: 0 };
+        const p3 = sorted[2] || { name: 'Player 3', avatar: '🥉', score: 0 };
+
+        document.getElementById('podium-p1-name').textContent = p1.name;
+        document.getElementById('podium-p1-avatar').textContent = p1.avatar;
+        document.getElementById('podium-p1-score').textContent = (p1.score || 0) + ' pts';
+
+        document.getElementById('podium-p2-name').textContent = p2.name;
+        document.getElementById('podium-p2-avatar').textContent = p2.avatar;
+        document.getElementById('podium-p2-score').textContent = (p2.score || 0) + ' pts';
+
+        document.getElementById('podium-p3-name').textContent = p3.name;
+        document.getElementById('podium-p3-avatar').textContent = p3.avatar;
+        document.getElementById('podium-p3-score').textContent = (p3.score || 0) + ' pts';
+
+        // Personal Stats
+        let correctTally = 0;
+        this.currentQuestions.forEach((q, idx) => {
+          if (this.userSelections[idx] === q.correct) correctTally++;
+        });
+        const accuracyPct = Math.round((correctTally / this.currentQuestions.length) * 100);
+
+        document.getElementById('final-stats-score').textContent = this.score;
+        document.getElementById('final-stats-accuracy').textContent = accuracyPct + '%';
+        document.getElementById('final-stats-streak').textContent = this.maxStreak + ' 🔥';
+
+        this.renderComprehensiveSolutions();
+
+        this.showView('view-game-over');
+        soundFX.playWin();
+
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        }
+      }
+
+      renderComprehensiveSolutions() {
+        const container = document.getElementById('comprehensive-solutions-list');
+        document.getElementById('review-total-count').textContent = `${this.currentQuestions.length} Questions`;
+
+        container.innerHTML = this.currentQuestions.map((q, idx) => {
+          const selected = this.userSelections[idx];
+          const isCorrect = selected === q.correct;
+          const isSkipped = selected === undefined || selected === -1;
+
+          let badge = '';
+          if (isCorrect) {
+            badge = '<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">✓ Correct</span>';
+          } else if (isSkipped) {
+            badge = '<span class="px-2 py-0.5 rounded text-[10px] font-black bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-300">○ Skipped</span>';
+          } else {
+            badge = '<span class="px-2 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">✕ Incorrect</span>';
+          }
+
+          return `
+            <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-500 uppercase">Q${idx + 1} • ${q.topic} (Ch ${q.chapter})</span>
+                ${badge}
+              </div>
+              <p class="font-bold text-slate-900 dark:text-white text-sm">${q.text}</p>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <div class="p-2 rounded-xl bg-emerald-100/50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200">
+                  <span class="font-bold block text-[10px] uppercase text-emerald-700">Correct Answer:</span>
+                  ${q.options[q.correct]}
+                </div>
+                <div class="p-2 rounded-xl ${isCorrect ? 'bg-emerald-100/50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200' : 'bg-rose-100/50 dark:bg-rose-950/50 text-rose-900 dark:text-rose-200'}">
+                  <span class="font-bold block text-[10px] uppercase ${isCorrect ? 'text-emerald-700' : 'text-rose-700'}">Your Selection:</span>
+                  ${isSkipped ? 'Time expired / No response' : q.options[selected]}
+                </div>
+              </div>
+
+              <p class="text-slate-600 dark:text-slate-400 text-[11px] pt-1 border-t border-slate-200 dark:border-slate-700">
+                <strong class="text-slate-700 dark:text-slate-300">Economic Rationale: </strong>${q.explanation}
+              </p>
+            </div>
+          `;
+        }).join('');
+      }
+
+      copyRoomLink() {
+        const link = `${window.location.origin}${window.location.pathname}?room=${this.roomCode}`;
+        const temp = document.createElement('input');
+        temp.value = link;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+
+        const lbl = document.getElementById('label-copy-link');
+        const orig = lbl.textContent;
+        lbl.textContent = 'Link Copied!';
+        soundFX.beep(750, 'sine', 0.1);
+        setTimeout(() => { lbl.textContent = orig; }, 1800);
+      }
+
+      toggleQRModal() {
+        const modal = document.getElementById('modal-qr-code');
+        modal.classList.toggle('hidden');
+        lucide.createIcons();
+      }
+
+      downloadCertificate() {
+        const canvas = document.getElementById('certificate-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Draw Certificate Background
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(0, 0, 1200, 800);
+
+        // Gold Border Frame
+        ctx.strokeStyle = "#eab308";
+        ctx.lineWidth = 14;
+        ctx.strokeRect(30, 30, 1140, 740);
+
+        ctx.strokeStyle = "#6366f1";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(45, 45, 1110, 710);
+
+        // Header Title
+        ctx.fillStyle = "#f8fafc";
+        ctx.font = "bold 44px 'Outfit', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("CERTIFICATE OF ECONOMICS MASTERY", 600, 140);
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "20px 'Inter', sans-serif";
+        ctx.fillText("Class 9 • Module 3: Production, Cost & Revenue", 600, 185);
+
+        // Awarded To
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "italic 22px 'Inter', sans-serif";
+        ctx.fillText("This certificate is proudly awarded to", 600, 260);
+
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "bold 56px 'Outfit', sans-serif";
+        ctx.fillText(this.playerName, 600, 340);
+
+        // Achievement Text
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "24px 'Inter', sans-serif";
+        ctx.fillText(`For outstanding performance with a total score of ${this.score} PTS`, 600, 420);
+        ctx.fillText(`and a peak streak of ${this.maxStreak} in the Live EcoMaster Arena.`, 600, 460);
+
+        // Seal / Emblem
+        ctx.fillStyle = "#eab308";
+        ctx.font = "70px sans-serif";
+        ctx.fillText("🏅", 600, 560);
+
+        // Signatures line
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(250, 680);
+        ctx.lineTo(450, 680);
+        ctx.moveTo(750, 680);
+        ctx.lineTo(950, 680);
+        ctx.stroke();
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "16px 'Inter', sans-serif";
+        ctx.fillText("Verified Competition Score", 350, 710);
+        ctx.fillText("EcoMaster Learning Board", 850, 710);
+
+        // Download image
+        const imgUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `EcoMaster_Certificate_${this.playerName.replace(/\s+/g, '_')}.png`;
+        link.href = imgUrl;
+        link.click();
+      }
+
+      showView(viewId) {
+        ['view-lobby', 'view-room-lobby', 'view-quiz-arena', 'view-game-over'].forEach(v => {
+          const el = document.getElementById(v);
+          if (v === viewId) el.classList.remove('hidden');
+          else el.classList.add('hidden');
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        lucide.createIcons();
+      }
+
+      goHome() {
+        if (this.roomUnsubscribe) {
+          this.roomUnsubscribe();
+          this.roomUnsubscribe = null;
+        }
+        document.getElementById('nav-room-badge').classList.add('hidden');
+        this.showView('view-lobby');
+      }
+
+      restartBattle() {
+        if (this.isSolo) {
+          this.startSoloMode();
+        } else if (this.isHost) {
+          this.startBattleMatch();
+        } else {
+          this.goHome();
+        }
+      }
+    }
+
+    const appController = new EcoMasterApp();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
